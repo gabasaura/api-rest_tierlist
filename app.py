@@ -11,8 +11,8 @@ app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tierlist.db'
 app.config['DEBUG'] = True
-app.config['UPLOAD_FOLDER'] = 'uploads/'  # Carpeta donde se guardarán las imágenes
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Límite de tamaño de archivo a 16 MB
+app.config['UPLOAD_FOLDER'] = 'img/'  # Carpeta donde se guardarán las imágenes
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # Límite de tamaño de archivo a 2 MB
 
 db.init_app(app)
 CORS(app)
@@ -184,11 +184,16 @@ def get_elements():
 
 @app.route('/elements', methods=['POST'])  # CREATE NEW ELEMENT
 def create_element():
-    data = request.form
-    file = request.files.get('img')
+
+    if 'img' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    file = request.files['img']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        data = request.form
         new_element = Element(
             category_id=data['category_id'],
             name=data['name'],
@@ -199,19 +204,24 @@ def create_element():
         return jsonify(new_element.serialize()), 201
     return jsonify({'error': 'File not allowed or missing'}), 400
 
+
+
 @app.route('/elements/<int:element_id>', methods=['PUT'])  # UPDATE ELEMENT
 def update_element(element_id):
-    data = request.get_json()
     element = Element.query.get(element_id)
     if element is None:
         return jsonify({'error': 'Element not found'}), 404
-    element.name = data['name']
+
+    data = request.form
+    element.name = data.get('name', element.name)
+
     if 'img' in request.files:
         file = request.files['img']
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             element.img = filename
+
     db.session.commit()
     return jsonify(element.serialize())
 
