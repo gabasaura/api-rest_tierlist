@@ -8,3 +8,6 @@
   - Python: The main programming language used.
   - Flask: Micro web framework for developing the application.
   - SQLite: Database for storing tier lists and user data.
+
+# Frontend playground
+#### Soon
